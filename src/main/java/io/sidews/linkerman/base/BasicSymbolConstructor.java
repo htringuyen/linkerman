@@ -9,7 +9,7 @@ import org.eclipse.emf.ecore.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
-public class BasicEObjectConstructor implements EObjectConstructor {
+public class BasicSymbolConstructor implements SymbolConstructor {
 
     private final EPackage ePackage;
 
@@ -19,7 +19,7 @@ public class BasicEObjectConstructor implements EObjectConstructor {
 
     private final AtomicLong dummyStringCounter = new AtomicLong();
 
-    public BasicEObjectConstructor(ModelDescriptor.Registry registry, EPackage ePackage, GrammarAnalyzer grammarAnalyzer) {
+    public BasicSymbolConstructor(ModelDescriptor.Registry registry, EPackage ePackage, GrammarAnalyzer grammarAnalyzer) {
         this.descriptorRegistry = registry;
         this.ePackage = ePackage;
         this.grammarAnalyzer = grammarAnalyzer;
@@ -27,8 +27,8 @@ public class BasicEObjectConstructor implements EObjectConstructor {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T extends EObject> T constructDefaultEObject(Class<T> instanceType) {
-        var eClass = EMFUtil.findEClassOf(instanceType, ePackage);
+    public <T extends EObject> T constructDefaultSymbol(Class<T> symbolType) {
+        var eClass = EMFUtil.findEClassOf(symbolType, ePackage);
         var target = ePackage.getEFactoryInstance().create(eClass);
 
         target.eClass().getEAllAttributes().stream()
@@ -63,7 +63,7 @@ public class BasicEObjectConstructor implements EObjectConstructor {
     private EObject createReferenceValue(EReference reference) {
         var refType = reference.getEReferenceType();
         var descriptor = descriptorRegistry.getOrCreate((Class<EObject>) refType.getInstanceClass());
-        return constructDefaultEObject(descriptor.getReturnType());
+        return constructDefaultSymbol(descriptor.getReturnType());
     }
 
     private Object createAttributeValue(EAttribute attribute) {

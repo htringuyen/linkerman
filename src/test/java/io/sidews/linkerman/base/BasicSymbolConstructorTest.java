@@ -11,18 +11,18 @@ import org.slf4j.LoggerFactory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class BasicEObjectConstructorTest {
+public class BasicSymbolConstructorTest {
 
-    private static final Logger logger = LoggerFactory.getLogger(BasicEObjectConstructorTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(BasicSymbolConstructorTest.class);
 
-    private static BasicEObjectConstructor constructor;
+    private static BasicSymbolConstructor constructor;
 
     @BeforeAll
     static void globalSetup() {
         var grammarAnalyzer = new BasicGrammarAnalyzer(
                 XtextContext.getGrammar(), XtextContext.getGrammarConstraintProvider());
         var registry = new DefaultModelDescriptor.Registry(grammarAnalyzer, XtextContext.getEPackage());
-        constructor = new BasicEObjectConstructor(registry, XtextContext.getEPackage(), grammarAnalyzer);
+        constructor = new BasicSymbolConstructor(registry, XtextContext.getEPackage(), grammarAnalyzer);
     }
 
     @Test
