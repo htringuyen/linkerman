@@ -23,6 +23,7 @@ public class BasicGrammarAnalyzer implements GrammarAnalyzer {
     public BasicGrammarAnalyzer(Grammar grammar, IGrammarConstraintProvider constraintProvider) {
         this.grammar = grammar;
         this.constraintProvider = constraintProvider;
+
     }
 
     @Override
@@ -36,11 +37,12 @@ public class BasicGrammarAnalyzer implements GrammarAnalyzer {
 
     @Override
     public Set<EReference> getAllSymbolContainers(EClass symbolType) {
-        return getAllReferencesIn(symbolType.getEPackage())
-                .filter(ref -> ref.getEReferenceType().isSuperTypeOf(symbolType))
-                .filter(ref -> getSymbolReturnTypes(ref.getEReferenceType()).stream()
-                        .anyMatch(symbolType::isSuperTypeOf))
-                .collect(Collectors.toSet());
+        return getSymbolContainersIn(getAllReferencesIn(symbolType.getEPackage()), symbolType);
+    }
+
+    @Override
+    public Set<EReference> getSymbolContainers(EClass symbolEClass, EClass parentEClass) {
+        return getSymbolContainersIn(parentEClass.getEAllReferences().stream(), symbolEClass);
     }
 
     private static Stream<EReference> getAllReferencesIn(EPackage ePackage) {
@@ -51,12 +53,20 @@ public class BasicGrammarAnalyzer implements GrammarAnalyzer {
                 .flatMap(c -> c.getEAllReferences().stream());
     }
 
+    private Set<EReference> getSymbolContainersIn(Stream<EReference> possibleReferences, EClass symbolType) {
+        return possibleReferences.filter(ref -> ref.getEReferenceType().isSuperTypeOf(symbolType))
+                .filter(ref -> getSymbolReturnTypes(ref.getEReferenceType()).stream()
+                        .anyMatch(symbolType::isSuperTypeOf))
+                .collect(Collectors.toSet());
+    }
+
     @Override
     public Set<EClass> getSymbolReturnTypes(EClass symbolType) {
         var returnTypes = new HashSet<EClass>();
         var parserRules = findParserRule(symbolType);
         if (!parserRules.isEmpty()) {
-            parserRules.forEach(r -> findReturnTypesForElement(r.getAlternatives(), symbolType, returnTypes));
+            parserRules.forEach(r -> findReturnTypesForElement(
+                    r.getAlternatives(), symbolType, returnTypes, new HashSet<>()));
         }
         else if (isActionRefType(symbolType)) {
             returnTypes.add(symbolType);
@@ -64,26 +74,26 @@ public class BasicGrammarAnalyzer implements GrammarAnalyzer {
         return returnTypes;
     }
 
-    @Override
-    public Set<EReference> getSymbolContainers(EClass symbolEClass, EClass parentEClass) {
-        return parentEClass.getEAllReferences()
-                .stream()
-                .filter(ref ->
-                        getSymbolReturnTypes(ref.getEReferenceType()).contains(symbolEClass))
-                .collect(Collectors.toSet());
-    }
-
     private static EClass findReturnTypesForElement(AbstractElement element,
-                                                           EClass currentType, Set<EClass> returnTypes) {
+                                                    EClass currentType,
+                                                    Set<EClass> returnTypes,
+                                                    Set<EClass> visitedTypes) {
+        if (visitedTypes.contains(currentType)) {
+            //return currentType;
+        }
+        visitedTypes.add(currentType);
         switch (element) {
             case CompoundElement container -> {
                 for (var childElement : container.getElements()) {
-                    currentType = findReturnTypesForElement(childElement, currentType, returnTypes);
+                    currentType = findReturnTypesForElement(childElement, currentType, returnTypes, visitedTypes);
                 }
             }
             case RuleCall ruleCall when ruleCall.getRule() instanceof ParserRule parserRule -> {
                 var newPathType = (EClass) parserRule.getType().getClassifier();
-                findReturnTypesForElement(parserRule.getAlternatives(), newPathType, returnTypes);
+                /*if (currentType.isSuperTypeOf(newPathType) && currentType != newPathType) {
+                    findReturnTypesForElement(parserRule.getAlternatives(), newPathType, returnTypes, visitedTypes);
+                }*/
+                findReturnTypesForElement(parserRule.getAlternatives(), newPathType, returnTypes, visitedTypes);
             }
             case Action action -> {
                 currentType = (EClass) action.getType().getClassifier();

@@ -1,6 +1,6 @@
 package io.sidews.linkerman.base;
 
-import io.sidews.linkerman.XtextContext;
+import io.sidews.linkerman.LinkerScriptContext;
 import org.eclipse.cdt.linkerscript.linkerScript.LinkerScript;
 import org.eclipse.cdt.linkerscript.linkerScript.StatementInputSection;
 import org.junit.jupiter.api.BeforeAll;
@@ -19,22 +19,22 @@ public class BasicSymbolConstructorTest {
 
     @BeforeAll
     static void globalSetup() {
+        var ctx = new LinkerScriptContext();
         var grammarAnalyzer = new BasicGrammarAnalyzer(
-                XtextContext.getGrammar(), XtextContext.getGrammarConstraintProvider());
-        var registry = new DefaultModelDescriptor.Registry(grammarAnalyzer, XtextContext.getEPackage());
-        constructor = new BasicSymbolConstructor(registry, XtextContext.getEPackage(), grammarAnalyzer);
+                ctx.getGrammar(), ctx.getGrammarConstraintProvider());
+        var registry = new DefaultModelDescriptor.Registry(grammarAnalyzer, ctx.getEPackage());
+        constructor = new BasicSymbolConstructor(registry, ctx.getEPackage(), grammarAnalyzer);
     }
 
     @Test
     void testConstructDefaultEObject_LinkerScript() {
-        var linkerScript = constructor.constructDefaultEObject(LinkerScript.class);
+        var linkerScript = constructor.constructDefaultSymbol(LinkerScript.class);
         assertEquals(1, linkerScript.getStatements().size());
     }
 
     @Test
     void testConstructDefaultEObject_StatementInputSection() {
-        var statement = constructor.constructDefaultEObject(StatementInputSection.class);
+        var statement = constructor.constructDefaultSymbol(StatementInputSection.class);
         assertNotNull(statement.getSpec());
     }
-
 }

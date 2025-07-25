@@ -28,8 +28,9 @@ public class BasicSymbolConstructor implements SymbolConstructor {
     @SuppressWarnings("unchecked")
     @Override
     public <T extends EObject> T constructDefaultSymbol(Class<T> symbolType) {
-        var eClass = EMFUtil.findEClassOf(symbolType, ePackage);
-        var target = ePackage.getEFactoryInstance().create(eClass);
+        var descriptor = descriptorRegistry.getOrCreate(symbolType);
+        var target = ePackage.getEFactoryInstance().create(
+                EMFUtil.findEClassOf(descriptor.getReturnType(), ePackage));
 
         target.eClass().getEAllAttributes().stream()
                 .filter(grammarAnalyzer::isFeatureRequired)

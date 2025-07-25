@@ -1,6 +1,7 @@
 package io.sidews.linkerman.base;
 
-import io.sidews.linkerman.XtextContext;
+import io.sidews.linkerman.LinkerScriptContext;
+import io.sidews.linkerman.util.EMFUtil;
 import org.eclipse.cdt.linkerscript.linkerScript.LinkerScriptPackage;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EClassifier;
@@ -22,8 +23,9 @@ public class BasicGrammarAnalyzerTest {
 
     @BeforeAll
     static void globalSetup() {
-        analyzer = new BasicGrammarAnalyzer(XtextContext.getGrammar(), XtextContext.getGrammarConstraintProvider());
-        pkg = XtextContext.getEPackage();
+        var ctx = new LinkerScriptContext();
+        analyzer = new BasicGrammarAnalyzer(ctx.getGrammar(), ctx.getGrammarConstraintProvider());
+        pkg = ctx.getLinkerScriptPackage();
     }
 
     @Test
@@ -85,7 +87,7 @@ public class BasicGrammarAnalyzerTest {
 
     @Test
     void testIsFeatureRequired_DebugInfo() {
-        XtextContext.getEAllClasses().forEach(eClass -> {
+        EMFUtil.getAllEClassIn(pkg).forEach(eClass -> {
             logger.info("[{}] features:", eClass.getName());
             eClass.getEAllAttributes().forEach(attr -> {
                 logger.info("--> [ATTR] required: {} - name: {} - type: {}",
@@ -99,5 +101,10 @@ public class BasicGrammarAnalyzerTest {
         });
     }
 
+    @Test
+    void testGetSymbolContainer_InputSection_StatementInputSection() {
+        var refs = analyzer.getSymbolContainers(pkg.getInputSection(), pkg.getStatementInputSection());
+        assertEquals(1, refs.size());
+    }
 }
 

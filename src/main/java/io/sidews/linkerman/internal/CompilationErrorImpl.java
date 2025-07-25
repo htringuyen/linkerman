@@ -36,25 +36,3 @@ public class CompilationErrorImpl implements CompilationError {
         return diagnostic.getColumnEnd();
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

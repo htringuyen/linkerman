@@ -1,7 +1,8 @@
 package io.sidews.linkerman.base;
 
+import io.sidews.linkerman.LinkerScriptContext;
 import io.sidews.linkerman.ModelDescriptor;
-import io.sidews.linkerman.XtextContext;
+import io.sidews.linkerman.util.EMFUtil;
 import org.eclipse.emf.ecore.EObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,16 +15,18 @@ public class DefaultModelDescriptorRegistryTest {
 
     private ModelDescriptor.Registry registry;
 
+    private static final LinkerScriptContext ctx = new LinkerScriptContext();
+
     @BeforeEach
     void setup() {
-        registry = new DefaultModelDescriptor.Registry(new BasicGrammarAnalyzer(XtextContext.getGrammar(), XtextContext.getGrammarConstraintProvider()),
-                XtextContext.getEPackage());
+        registry = new DefaultModelDescriptor.Registry(new BasicGrammarAnalyzer(ctx.getGrammar(), ctx.getGrammarConstraintProvider()),
+                ctx.getEPackage());
     }
 
     @SuppressWarnings("unchecked")
     @Test
     void testGetOrCreateDefaultDescriptors_DebugInfo() {
-        XtextContext.getEAllClasses().forEach(symbolEClass -> {
+        EMFUtil.getAllEClassIn(ctx.getEPackage()).forEach(symbolEClass -> {
             logger.info("{}:", symbolEClass.getName());
             var descriptor = registry.getOrCreate((Class<? extends EObject>) symbolEClass.getInstanceClass());
             logger.info("--> return={}, parent={}, symbol={}",

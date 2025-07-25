@@ -3,7 +3,6 @@ package io.sidews.linkerman;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EReference;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -12,6 +11,8 @@ public interface DynamicModel<T extends EObject> {
     ModelDescriptor<T> getDescriptor();
 
     T getSymbol();
+
+    void linkToParent(DynamicModel<? extends EObject> parent);
 
     void linkToParent(DynamicModel<? extends EObject> parent, NodeLinkStrategy linkStrategy);
 
@@ -29,7 +30,16 @@ public interface DynamicModel<T extends EObject> {
 
     @FunctionalInterface
     interface NodeLinkStrategy {
+
         Optional<EReference> selectContainingReference(Set<EReference> possibleReferences);
+
+        default boolean shouldOverrideSingular() {
+            return false;
+        }
+
+        default boolean shouldClearCollection() {
+            return false;
+        }
     }
 
     interface Factory<T extends EObject> {
@@ -40,7 +50,7 @@ public interface DynamicModel<T extends EObject> {
     interface Registry {
         <T extends EObject> Factory<T> getFactory(Class<T> symbolType);
         <T extends EObject> DynamicModel<T> createDefault(Class<T> symbolType);
-        <T extends EObject> DynamicModel<T> createWith(Class<T> symbolType, T symbol);
+        <T extends EObject> DynamicModel<T> createWith(T symbol);
     }
 }
 

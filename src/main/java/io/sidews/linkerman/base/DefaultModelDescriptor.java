@@ -22,7 +22,6 @@ public class DefaultModelDescriptor<T extends EObject> implements ModelDescripto
         Optional<EClass> postSelectReturnType(@Nonnull Set<EClass> returnTypes);
     }
 
-
     private final Class<T> symbolType;
 
     private final EClass symbolEClass;
@@ -111,7 +110,7 @@ public class DefaultModelDescriptor<T extends EObject> implements ModelDescripto
 
     public static class Registry implements ModelDescriptor.Registry {
 
-        private static final InferenceStrategy GET_FIRST = new GetFirstInferenceStrategy();
+        private static final InferenceStrategy DEFAULT_INFERENCE = new DefaultInferenceStrategy();
 
         private final Map<Class<?>, Factory<?>> factoryMap = new HashMap<>();
 
@@ -128,7 +127,7 @@ public class DefaultModelDescriptor<T extends EObject> implements ModelDescripto
         }
 
         public Registry(GrammarAnalyzer grammarAnalyzer, EPackage ePackage) {
-            this(grammarAnalyzer, ePackage, GET_FIRST);
+            this(grammarAnalyzer, ePackage, DEFAULT_INFERENCE);
         }
 
 
@@ -152,7 +151,7 @@ public class DefaultModelDescriptor<T extends EObject> implements ModelDescripto
             return () -> new DefaultModelDescriptor<>(symbolType, grammarAnalyzer, ePackage, inferenceStrategy);
         }
 
-        private static class GetFirstInferenceStrategy  implements InferenceStrategy {
+        private static class DefaultInferenceStrategy implements InferenceStrategy {
             @Override
             public Optional<Boolean> getIsASTRoot() {
                 return Optional.empty();
@@ -165,7 +164,15 @@ public class DefaultModelDescriptor<T extends EObject> implements ModelDescripto
 
             @Override
             public Optional<EClass> postSelectReturnType(@Nonnull Set<EClass> returnTypes) {
-                return returnTypes.stream().findFirst();
+                // try to find ideal return type
+                var result = returnTypes.stream()
+                        .filter(e -> e.getEAllReferences().isEmpty()).findFirst();
+
+                if (result.isEmpty()) {
+                    // fallback to random acceptable result
+                    result = returnTypes.stream().findFirst();
+                }
+                return result;
             }
         }
     }
