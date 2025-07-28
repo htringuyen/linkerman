@@ -7,14 +7,19 @@ import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.xtext.*;
 import org.eclipse.xtext.serializer.ISerializationContext;
 import org.eclipse.xtext.serializer.analysis.IGrammarConstraintProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class BasicGrammarAnalyzer implements GrammarAnalyzer {
+
+    private static final Logger logger = LoggerFactory.getLogger(BasicGrammarAnalyzer.class);
 
     private final Grammar grammar;
 
@@ -64,9 +69,14 @@ public class BasicGrammarAnalyzer implements GrammarAnalyzer {
     public Set<EClass> getSymbolReturnTypes(EClass symbolType) {
         var returnTypes = new HashSet<EClass>();
         var parserRules = findParserRule(symbolType);
+        logger.debug("Parser rule count for {}: {}", symbolType.getName(), parserRules.size());
         if (!parserRules.isEmpty()) {
-            parserRules.forEach(r -> findReturnTypesForElement(
-                    r.getAlternatives(), symbolType, returnTypes, new HashSet<>()));
+            parserRules.forEach(r -> {
+                logger.debug("Exploring rule: {}", r.getName());
+                findReturnTypesForElement(
+                        r.getAlternatives(), symbolType, returnTypes, new HashSet<>());
+                logger.debug("**********************************************************");
+            });
         }
         else if (isActionRefType(symbolType)) {
             returnTypes.add(symbolType);
@@ -81,15 +91,24 @@ public class BasicGrammarAnalyzer implements GrammarAnalyzer {
         if (visitedTypes.contains(currentType)) {
             //return currentType;
         }
-        visitedTypes.add(currentType);
+        //visitedTypes.add(currentType);
+        logger.debug("Current type: {}", currentType.getName());
+        logger.debug("Return types count: {}", returnTypes.size());
+
+        if (returnTypes.size() == 27) {
+            throw new RuntimeException();
+        }
+
         switch (element) {
             case CompoundElement container -> {
+                logger.debug("Element: {}", container instanceof Group ? "Group" : "Compound Element");
                 for (var childElement : container.getElements()) {
                     currentType = findReturnTypesForElement(childElement, currentType, returnTypes, visitedTypes);
                 }
             }
             case RuleCall ruleCall when ruleCall.getRule() instanceof ParserRule parserRule -> {
                 var newPathType = (EClass) parserRule.getType().getClassifier();
+                logger.debug("Element: Call -> {}", parserRule.getName());
                 /*if (currentType.isSuperTypeOf(newPathType) && currentType != newPathType) {
                     findReturnTypesForElement(parserRule.getAlternatives(), newPathType, returnTypes, visitedTypes);
                 }*/
@@ -101,14 +120,16 @@ public class BasicGrammarAnalyzer implements GrammarAnalyzer {
             }
             case null, default -> returnTypes.add(currentType);
         }
+
+        logger.debug("--------------------------------");
         return currentType;
     }
 
-    private Set<ParserRule> findParserRule(EClass symbolType) {
+    public List<ParserRule> findParserRule(EClass symbolType) {
         return GrammarUtil.allParserRules(grammar)
                 .stream()
                 .filter(r -> r.getType().getClassifier().equals(symbolType))
-                .collect(Collectors.toSet());
+                .toList();
     }
 
     private boolean isActionRefType(EClass refType) {
@@ -139,25 +160,3 @@ public class BasicGrammarAnalyzer implements GrammarAnalyzer {
     }
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -9,9 +9,8 @@ import io.sidews.linkerman.base.BasicSymbolConstructor;
 import io.sidews.linkerman.base.DefaultDynamicModel;
 import io.sidews.linkerman.base.DefaultModelDescriptor;
 import org.eclipse.cdt.linkerscript.linkerScript.InputSection;
-import org.eclipse.cdt.linkerscript.linkerScript.LinkerScript;
+import org.eclipse.cdt.linkerscript.linkerScript.LExpression;
 import org.eclipse.cdt.linkerscript.linkerScript.StatementAssignment;
-import org.eclipse.cdt.linkerscript.linkerScript.StatementInputSection;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -69,10 +68,25 @@ public class CompilerImplTest {
         var model = compiler.compile(snippet, descriptorRegistry.getOrCreate(InputSection.class))
                 .single();
 
-        logger.info("model in xmi:\n{}", serializer.serializeToXMI(model));
+        logModelXmi(model);
 
         assertNotNull(model);
     }
+
+    @Test
+    void testCompile_Expression() {
+        var model = compiler.compile("hello", descriptorRegistry.getOrCreate(LExpression.class))
+                .single();
+
+        logModelXmi(model);
+        assertNotNull(model);
+    }
+
+
+    private void logModelXmi(DynamicModel<?> model) {
+        logger.info("model in xmi:\n{}", serializer.serializeToXMI(model));
+    }
+
 }
 
 
