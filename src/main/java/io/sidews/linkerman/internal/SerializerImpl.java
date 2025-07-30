@@ -5,7 +5,6 @@ import io.sidews.linkerman.DynamicModel;
 import io.sidews.linkerman.Serializer;
 import io.sidews.linkerman.base.DynamicProcessingException;
 import org.eclipse.emf.ecore.EObject;
-import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
 import org.eclipse.emf.ecore.util.EcoreUtil;
@@ -40,7 +39,7 @@ public class SerializerImpl implements Serializer {
 
     @Override
     public String serializeToDSL(DynamicModel<? extends EObject> model) {
-        var root = EcoreUtil.getRootContainer(model.getSymbol());
+        var root = EcoreUtil.getRootContainer(model.getSymbolInstance());
         if (root.eResource() == null) {
             dslContext.getResourceSet().createResource(InMemURIGenerator.createFor(dslContext.getExtension()))
                     .getContents().add(root);
@@ -50,7 +49,7 @@ public class SerializerImpl implements Serializer {
 
     @Override
     public String serializeToXMI(DynamicModel<? extends EObject> model) {
-        return serializeToXMI(model.getSymbol());
+        return serializeToXMI(model.getSymbolInstance());
     }
 
     @Override

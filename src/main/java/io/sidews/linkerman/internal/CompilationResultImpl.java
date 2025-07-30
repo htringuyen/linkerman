@@ -26,7 +26,7 @@ public class CompilationResultImpl<T extends EObject> implements CompilationResu
 
     @Override
     public boolean hasError() {
-        return errors.isEmpty();
+        return !errors.isEmpty();
     }
 
     @Override

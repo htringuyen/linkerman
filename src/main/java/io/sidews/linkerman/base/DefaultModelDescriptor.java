@@ -1,135 +1,62 @@
 package io.sidews.linkerman.base;
 
+import io.sidews.linkerman.DSLSymbol;
 import io.sidews.linkerman.ModelDescriptor;
+import io.sidews.linkerman.SymbolResolver;
 import io.sidews.linkerman.util.EMFUtil;
 import org.eclipse.emf.ecore.*;
 
-import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public class DefaultModelDescriptor<T extends EObject> implements ModelDescriptor<T> {
 
-    public interface InferenceStrategy {
+    private final DSLSymbol symbol;
 
-        Optional<Boolean> getIsASTRoot();
+    private final SymbolResolver symbolResolver;
 
-        Optional<EClass> postSelectParentType(@Nonnull Set<EClass> parentTypes);
-
-        Optional<EClass> postSelectReturnType(@Nonnull Set<EClass> returnTypes);
-    }
-
-    private final Class<T> symbolType;
-
-    private final EClass symbolEClass;
-
-    private final GrammarAnalyzer analyzer;
-
-    private Class<? extends EObject> parentType;
-
-    private Class<? extends T> returnType;
-
-    private final InferenceStrategy inferenceStrategy;
-
-    private Boolean isASTRoot;
-
-    public DefaultModelDescriptor(Class<T> symbolType, GrammarAnalyzer analyzer,
-                                  EPackage ePackage, InferenceStrategy inferenceStrategy) {
-        this.symbolType = symbolType;
-        this.symbolEClass = EMFUtil.findEClassOf(symbolType, ePackage);
-        this.analyzer = analyzer;
-        this.inferenceStrategy = inferenceStrategy;
-    }
-
-    @Override
-    public boolean isASTRoot() {
-        if (isASTRoot == null) {
-            isASTRoot = inferIsASTRoot();
-        }
-        return isASTRoot;
+    private DefaultModelDescriptor(DSLSymbol symbol, SymbolResolver symbolResolver) {
+        this.symbolResolver = symbolResolver;
+        this.symbol = symbol;
     }
 
     @Override
     public Class<T> getSymbolType() {
-        return symbolType;
-    }
-
-    @Override
-    public EClass getSymbolEClass() {
-        return symbolEClass;
+        return EMFUtil.getInstanceClass(symbol.getESymbolType());
     }
 
     @Override
     public Class<? extends EObject> getParentType() {
-        if (parentType == null) {
-            parentType = inferParentType();
+        if (symbol.isASTRoot()) {
+            return null;
         }
-        return parentType;
+        return EMFUtil.getInstanceClass(symbolResolver.resolveParentType(symbol));
     }
 
     @Override
     public Class<? extends T> getReturnType() {
-        if (returnType == null) {
-            returnType = inferReturnType();
-        }
-        return returnType;
+        return EMFUtil.getInstanceClass(symbolResolver.resolveReturnType(symbol));
     }
 
-    @SuppressWarnings("unchecked")
-    private Class<? extends EObject> inferParentType() {
-        var possibleParents = analyzer.getAllSymbolContainers(symbolEClass)
-                .stream()
-                .map(EReference::getEContainingClass)
-                .collect(Collectors.toSet());
-        var parent = inferenceStrategy.postSelectParentType(possibleParents);
-        if (parent.isEmpty() && !isASTRoot()) {
-            throw new DynamicProcessingException(
-                    "Cannot infer parent type for symbol: " + symbolType);
-        }
-        else if (parent.isEmpty()) {
-            return null;
-        }
-        return (Class<? extends EObject>) parent.get().getInstanceClass();
+    @Override
+    public DSLSymbol getSymbol() {
+        return symbol;
     }
 
-    @SuppressWarnings("unchecked")
-    private Class<? extends T> inferReturnType() {
-        var possibleReturnTypes = analyzer.getSymbolReturnTypes(symbolEClass);
-        var returnType = inferenceStrategy.postSelectReturnType(possibleReturnTypes);
-        return (Class<? extends T>) returnType.orElseThrow(() -> new DynamicProcessingException(
-                "Cannot infer return type for symbol: " + symbolType)).getInstanceClass();
-    }
-
-    private boolean inferIsASTRoot() {
-        var strategyOption = inferenceStrategy.getIsASTRoot();
-        return strategyOption.orElseGet(() -> analyzer.isASTRoot(symbolEClass));
+    @Override
+    public SymbolResolver getSymbolResolver() {
+        return symbolResolver;
     }
 
     public static class Registry implements ModelDescriptor.Registry {
 
-        private static final InferenceStrategy DEFAULT_INFERENCE = new DefaultInferenceStrategy();
-
         private final Map<Class<?>, Factory<?>> factoryMap = new HashMap<>();
 
-        private final GrammarAnalyzer grammarAnalyzer;
+        private final SymbolManager symbolManager;
 
-        private final EPackage ePackage;
-
-        private final InferenceStrategy inferenceStrategy;
-
-        public Registry(GrammarAnalyzer grammarAnalyzer, EPackage ePackage, InferenceStrategy inferenceStrategy) {
-            this.grammarAnalyzer = grammarAnalyzer;
-            this.ePackage = ePackage;
-            this.inferenceStrategy = inferenceStrategy;
+        public Registry(SymbolManager symbolManager) {
+            this.symbolManager = symbolManager;
         }
-
-        public Registry(GrammarAnalyzer grammarAnalyzer, EPackage ePackage) {
-            this(grammarAnalyzer, ePackage, DEFAULT_INFERENCE);
-        }
-
 
         @SuppressWarnings("unchecked")
         @Override
@@ -148,32 +75,8 @@ public class DefaultModelDescriptor<T extends EObject> implements ModelDescripto
         }
 
         private <T extends EObject> Factory<T> createDefaultFactory(Class<T> symbolType) {
-            return () -> new DefaultModelDescriptor<>(symbolType, grammarAnalyzer, ePackage, inferenceStrategy);
-        }
-
-        private static class DefaultInferenceStrategy implements InferenceStrategy {
-            @Override
-            public Optional<Boolean> getIsASTRoot() {
-                return Optional.empty();
-            }
-
-            @Override
-            public Optional<EClass> postSelectParentType(@Nonnull Set<EClass> parentTypes) {
-                return parentTypes.stream().findFirst();
-            }
-
-            @Override
-            public Optional<EClass> postSelectReturnType(@Nonnull Set<EClass> returnTypes) {
-                // try to find ideal return type
-                var result = returnTypes.stream()
-                        .filter(e -> e.getEAllReferences().isEmpty()).findFirst();
-
-                if (result.isEmpty()) {
-                    // fallback to random acceptable result
-                    result = returnTypes.stream().findFirst();
-                }
-                return result;
-            }
+            return () -> new DefaultModelDescriptor<>(
+                    symbolManager.getSymbol(symbolType), SymbolResolvers.DEFAULT_SAFEST);
         }
     }
 }

@@ -8,13 +8,13 @@ import java.util.List;
 
 public class EMFUtil {
 
-    public static <T extends EObject> EClass findEClassOf(Class<T> instanceType, EPackage ePackage) {
+    public static EClass findEClassOf(Class<?> instanceType, EPackage ePackage) {
         return (EClass) ePackage.getEClassifier(instanceType.getSimpleName());
     }
 
     @SuppressWarnings("unchecked")
-    public static Class<? extends EObject> getInstanceClass(EClass eClass) {
-        return (Class<? extends EObject>) eClass.getInstanceClass();
+    public static <T extends EObject> Class<T> getInstanceClass(EClass eClass) {
+        return (Class<T>) eClass.getInstanceClass();
     }
 
     public static List<EClass> getAllEClassIn(EPackage ePackage) {

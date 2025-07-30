@@ -7,8 +7,8 @@ import org.eclipse.emf.ecore.EPackage;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.xtext.Grammar;
 import org.eclipse.xtext.serializer.ISerializer;
-import org.eclipse.xtext.serializer.analysis.GrammarConstraintProvider;
 import org.eclipse.xtext.serializer.analysis.IGrammarConstraintProvider;
+import org.eclipse.xtext.validation.IResourceValidator;
 
 public interface DSLContext {
 
@@ -29,4 +29,8 @@ public interface DSLContext {
     IGrammarConstraintProvider getGrammarConstraintProvider();
 
     ISerializer getXtextSerializer();
+
+    IResourceValidator getValidator();
 }
+
+

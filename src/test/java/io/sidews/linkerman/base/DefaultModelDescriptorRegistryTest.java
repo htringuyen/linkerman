@@ -19,8 +19,8 @@ public class DefaultModelDescriptorRegistryTest {
 
     @BeforeEach
     void setup() {
-        registry = new DefaultModelDescriptor.Registry(new BasicGrammarAnalyzer(ctx.getGrammar(), ctx.getGrammarConstraintProvider()),
-                ctx.getEPackage());
+        registry = new DefaultModelDescriptor.Registry(
+                new SymbolManager(new BasicGrammarAnalyzer(ctx), ctx));
     }
 
     @SuppressWarnings("unchecked")

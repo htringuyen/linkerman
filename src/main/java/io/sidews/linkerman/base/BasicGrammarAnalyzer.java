@@ -1,5 +1,6 @@
 package io.sidews.linkerman.base;
 
+import io.sidews.linkerman.DSLContext;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EPackage;
 import org.eclipse.emf.ecore.EReference;
@@ -7,13 +8,11 @@ import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.xtext.*;
 import org.eclipse.xtext.serializer.ISerializationContext;
 import org.eclipse.xtext.serializer.analysis.IGrammarConstraintProvider;
+import org.eclipse.xtext.serializer.analysis.SerializationContextMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -21,19 +20,18 @@ public class BasicGrammarAnalyzer implements GrammarAnalyzer {
 
     private static final Logger logger = LoggerFactory.getLogger(BasicGrammarAnalyzer.class);
 
-    private final Grammar grammar;
+    private final DSLContext context;
 
-    private final IGrammarConstraintProvider constraintProvider;
+    private final SerializationContextMap<IGrammarConstraintProvider.IConstraint> constraintMap;
 
-    public BasicGrammarAnalyzer(Grammar grammar, IGrammarConstraintProvider constraintProvider) {
-        this.grammar = grammar;
-        this.constraintProvider = constraintProvider;
-
+    public BasicGrammarAnalyzer(DSLContext context) {
+        this.context = context;
+        constraintMap = context.getGrammarConstraintProvider().getConstraints(context.getGrammar());
     }
 
     @Override
     public boolean isASTRoot(EClass eClass) {
-        var entryRule = GrammarUtil.allParserRules(grammar).get(0);
+        var entryRule = GrammarUtil.allParserRules(context.getGrammar()).getFirst();
         if (entryRule.getType() != null && entryRule.getType().getClassifier() != null) {
             return eClass.equals(entryRule.getType().getClassifier());
         }
@@ -41,12 +39,12 @@ public class BasicGrammarAnalyzer implements GrammarAnalyzer {
     }
 
     @Override
-    public Set<EReference> getAllSymbolContainers(EClass symbolType) {
+    public List<EReference> getAllSymbolContainers(EClass symbolType) {
         return getSymbolContainersIn(getAllReferencesIn(symbolType.getEPackage()), symbolType);
     }
 
     @Override
-    public Set<EReference> getSymbolContainers(EClass symbolEClass, EClass parentEClass) {
+    public List<EReference> getSymbolContainers(EClass symbolEClass, EClass parentEClass) {
         return getSymbolContainersIn(parentEClass.getEAllReferences().stream(), symbolEClass);
     }
 
@@ -58,82 +56,114 @@ public class BasicGrammarAnalyzer implements GrammarAnalyzer {
                 .flatMap(c -> c.getEAllReferences().stream());
     }
 
-    private Set<EReference> getSymbolContainersIn(Stream<EReference> possibleReferences, EClass symbolType) {
-        return possibleReferences.filter(ref -> ref.getEReferenceType().isSuperTypeOf(symbolType))
-                .filter(ref -> getSymbolReturnTypes(ref.getEReferenceType()).stream()
-                        .anyMatch(symbolType::isSuperTypeOf))
-                .collect(Collectors.toSet());
+    private List<EReference> getSymbolContainersIn(Stream<EReference> possibleReferences, EClass symbolType) {
+        var symbolReturnTypesCache = new HashMap<EClass, Collection<EClass>>();
+
+        return possibleReferences
+                .filter(ref -> {
+                    EClass refType = ref.getEReferenceType();
+                    if (!refType.isSuperTypeOf(symbolType)) {
+                        return false;
+                    }
+                    Collection<EClass> returnTypes = symbolReturnTypesCache.computeIfAbsent(
+                            refType, this::getSymbolReturnTypes);
+                    return returnTypes.stream().anyMatch(symbolType::isSuperTypeOf);
+                })
+                .distinct()
+                .toList();
     }
 
-    @Override
-    public Set<EClass> getSymbolReturnTypes(EClass symbolType) {
-        var returnTypes = new HashSet<EClass>();
-        var parserRules = findParserRule(symbolType);
-        logger.debug("Parser rule count for {}: {}", symbolType.getName(), parserRules.size());
+    public List<EClass> getSymbolReturnTypes(EClass symbolType) {
+        var result = new LinkedHashSet<EClass>();
+        var parserRules = findParserRuleByType(symbolType);
         if (!parserRules.isEmpty()) {
-            parserRules.forEach(r -> {
-                logger.debug("Exploring rule: {}", r.getName());
-                findReturnTypesForElement(
-                        r.getAlternatives(), symbolType, returnTypes, new HashSet<>());
-                logger.debug("**********************************************************");
+            var resultPaths = new ArrayList<Stack<EClass>>();
+            parserRules.forEach(rule -> {
+                findReturnTypesForRule(rule, resultPaths);
             });
+            resultPaths.forEach(path -> result.add(path.pop()));
         }
         else if (isActionRefType(symbolType)) {
-            returnTypes.add(symbolType);
+            // do simple processing that work for all cases of linkerscript dsl
+            // but for other language, there may be rare exceptions
+            // however, to handle these rare exceptions requires a much more complicated algorithms
+            result.add(symbolType);
         }
-        return returnTypes;
+        else {
+            throw new DynamicProcessingException("Unknown rare case");
+        }
+        return result.stream().toList();
     }
 
-    private static EClass findReturnTypesForElement(AbstractElement element,
-                                                    EClass currentType,
-                                                    Set<EClass> returnTypes,
-                                                    Set<EClass> visitedTypes) {
-        if (visitedTypes.contains(currentType)) {
-            //return currentType;
-        }
-        //visitedTypes.add(currentType);
-        logger.debug("Current type: {}", currentType.getName());
-        logger.debug("Return types count: {}", returnTypes.size());
-
-        if (returnTypes.size() == 27) {
-            throw new RuntimeException();
-        }
-
-        switch (element) {
-            case CompoundElement container -> {
-                logger.debug("Element: {}", container instanceof Group ? "Group" : "Compound Element");
-                for (var childElement : container.getElements()) {
-                    currentType = findReturnTypesForElement(childElement, currentType, returnTypes, visitedTypes);
+    private void findReturnTypesForRule(ParserRule rule, List<Stack<EClass>> resultPaths) {
+        var element = rule.getAlternatives();
+        if (element instanceof Alternatives alternatives) {
+            for (var alt : alternatives.getElements()) {
+                if (alt instanceof RuleCall call
+                        && call.getRule() instanceof ParserRule altRule) {
+                    findReturnTypesForRule(altRule, resultPaths);
+                }
+                else {
+                    var rootPath = createRootPathFor(rule);
+                    resultPaths.add(rootPath);
+                    findReturnTypesFromSimpleElement(alt, rootPath, resultPaths);
                 }
             }
-            case RuleCall ruleCall when ruleCall.getRule() instanceof ParserRule parserRule -> {
-                var newPathType = (EClass) parserRule.getType().getClassifier();
-                logger.debug("Element: Call -> {}", parserRule.getName());
-                /*if (currentType.isSuperTypeOf(newPathType) && currentType != newPathType) {
-                    findReturnTypesForElement(parserRule.getAlternatives(), newPathType, returnTypes, visitedTypes);
-                }*/
-                findReturnTypesForElement(parserRule.getAlternatives(), newPathType, returnTypes, visitedTypes);
-            }
-            case Action action -> {
-                currentType = (EClass) action.getType().getClassifier();
-                returnTypes.add(currentType);
-            }
-            case null, default -> returnTypes.add(currentType);
         }
-
-        logger.debug("--------------------------------");
-        return currentType;
+        else if (element instanceof RuleCall call
+                && call.getRule() instanceof ParserRule altRule) {
+            findReturnTypesForRule(altRule, resultPaths);
+        }
+        else {
+            var rootPath = createRootPathFor(rule);
+            resultPaths.add(rootPath);
+            findReturnTypesFromSimpleElement(element, rootPath, resultPaths);
+        }
     }
 
-    public List<ParserRule> findParserRule(EClass symbolType) {
-        return GrammarUtil.allParserRules(grammar)
+    private Stack<EClass> createRootPathFor(ParserRule rule) {
+        var path = new Stack<EClass>();
+        path.push((EClass) rule.getType().getClassifier());
+        return path;
+    }
+
+    private void findReturnTypesFromSimpleElement(AbstractElement element, Stack<EClass> currentPath, List<Stack<EClass>> resultPaths) {
+
+        switch (element) {
+            case Alternatives alternatives -> {
+                for (var childElement : alternatives.getElements()) {
+                    var branchingPath = new Stack<EClass>();
+                    branchingPath.addAll(currentPath); // is the copy necessary?
+                    resultPaths.add(branchingPath);
+                    findReturnTypesFromSimpleElement(childElement, branchingPath, resultPaths);
+                }
+            }
+            case Group group -> {
+                for (var childElement : group.getElements()) {
+                    findReturnTypesFromSimpleElement(childElement, currentPath, resultPaths);
+                }
+            }
+            case RuleCall ruleCall -> {
+                // ignore non-direct rule call
+            }
+            case Action action -> {
+                currentPath.push((EClass) action.getType().getClassifier());
+            }
+            case null, default -> {
+                // ignore
+            }
+        }
+    }
+
+    public List<ParserRule> findParserRuleByType(EClass symbolType) {
+        return GrammarUtil.allParserRules(context.getGrammar())
                 .stream()
                 .filter(r -> r.getType().getClassifier().equals(symbolType))
                 .toList();
     }
 
     private boolean isActionRefType(EClass refType) {
-        return GrammarUtil.allParserRules(grammar)
+        return GrammarUtil.allParserRules(context.getGrammar())
                 .stream()
                 .flatMap(r -> EcoreUtil2.getAllContentsOfType(r, Action.class).stream())
                 .map(Action::getType)
@@ -143,7 +173,6 @@ public class BasicGrammarAnalyzer implements GrammarAnalyzer {
 
     @Override
     public boolean isFeatureRequired(EStructuralFeature feature) {
-        var constraintMap = constraintProvider.getConstraints(grammar);
         var contexts = new ArrayList<ISerializationContext>();
         for (var entry : constraintMap.values()) {
             contexts.addAll(entry.getContexts(feature.getEContainingClass()));
@@ -158,5 +187,4 @@ public class BasicGrammarAnalyzer implements GrammarAnalyzer {
         }
         return false;
     }
-
 }

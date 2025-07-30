@@ -1,38 +1,42 @@
 package io.sidews.linkerman.internal;
 
 import io.sidews.linkerman.CompilationError;
-import org.eclipse.xtext.diagnostics.Diagnostic;
+import org.eclipse.xtext.validation.Issue;
 
 public class CompilationErrorImpl implements CompilationError {
 
-    private final Diagnostic diagnostic;
+    private final Issue issue;
 
-    public CompilationErrorImpl(Diagnostic diagnostic) {
-        this.diagnostic = diagnostic;
+    public CompilationErrorImpl(Issue issue) {
+        this.issue = issue;
     }
 
     @Override
     public String getMessage() {
-        return diagnostic.getMessage();
+        return issue.getMessage();
     }
 
     @Override
     public int getLineStart() {
-        return diagnostic.getLine();
+        return issue.getLineNumber();
     }
 
     @Override
     public int getLineEnd() {
-        return diagnostic.getLineEnd();
+        return issue.getLineNumberEnd();
     }
 
     @Override
     public int getColumnStart() {
-        return diagnostic.getColumn();
+        return issue.getColumn();
     }
 
     @Override
     public int getColumnEnd() {
-        return diagnostic.getColumnEnd();
+        return issue.getColumnEnd();
+    }
+
+    public static CompilationError createFrom(Issue issue) {
+        return new CompilationErrorImpl(issue);
     }
 }

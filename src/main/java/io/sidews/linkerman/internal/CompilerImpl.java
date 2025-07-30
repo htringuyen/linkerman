@@ -1,26 +1,19 @@
 package io.sidews.linkerman.internal;
 
 import io.sidews.linkerman.*;
+import io.sidews.linkerman.base.LinkStrategies;
 import org.eclipse.emf.ecore.EObject;
-import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.xtext.resource.ILocationInFileProvider;
+import org.eclipse.xtext.validation.Issue;
 
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 
 public class CompilerImpl implements Compiler {
-
-    private static final DynamicModel.NodeLinkStrategy RESET_ALL = new ResetAllNodeLinkStrategy();
-
-    private final ModelDescriptor.Registry descriptorRegistry;
 
     private final DynamicModel.Registry modelRegistry;
 
     private final Serializer serializer;
-
-    private final DSLContext dslContext;
 
     private final DSLLoader dslLoader;
 
@@ -30,10 +23,8 @@ public class CompilerImpl implements Compiler {
                         DynamicModel.Registry modelRegistry,
                         Serializer serializer,
                         DSLContext dslContext) {
-        this.descriptorRegistry = descriptorRegistry;
         this.modelRegistry = modelRegistry;
         this.serializer = serializer;
-        this.dslContext = dslContext;
         this.dslLoader = new DSLLoader(dslContext);
         this.locationProvider = dslContext.getInjector().getInstance(ILocationInFileProvider.class);
     }
@@ -44,12 +35,16 @@ public class CompilerImpl implements Compiler {
 
         var targetModel = modelRegistry.createDefault(descriptor.getSymbolType());
         populateFullASTUpwardFrom(targetModel);
-        var targetUriFragment = EcoreUtil.getURI(targetModel.getSymbol()).fragment();
+        var targetUriFragment = EcoreUtil.getURI(targetModel.getSymbolInstance()).fragment();
 
         var finalScript = composeValidScriptEncompass(
                 snippet, serializer.serializeToDSL(targetModel), targetUriFragment);
 
-        var finalAST = dslLoader.loadDSL(finalScript);
+        var loadResult = dslLoader.loadDSL(finalScript);
+
+        var finalAST = loadResult.getRoot();
+
+        var errors = toErrors(loadResult.getIssues());
 
         var targetNode = finalAST.eResource().getEObject(targetUriFragment);
 
@@ -59,11 +54,17 @@ public class CompilerImpl implements Compiler {
 
         var resultModel = modelRegistry.createWith(resultNode);
 
-        return new CompilationResultImpl<>(List.of(resultModel), List.of());
+        return new CompilationResultImpl<>(List.of(resultModel), errors);
+    }
+
+    private List<CompilationError> toErrors(List<Issue> issues) {
+        return issues.stream()
+                .map(CompilationErrorImpl::createFrom)
+                .toList();
     }
 
     String composeValidScriptEncompass(String snippet, String defaultScript, String targetURIFragment) {
-        var rootNode = dslLoader.loadDSL(defaultScript);
+        var rootNode = dslLoader.loadDSL(defaultScript).getRoot();
         var targetNode = rootNode.eResource().getEObject(targetURIFragment);
 
         var targetRegion = locationProvider.getFullTextRegion(targetNode);
@@ -81,28 +82,16 @@ public class CompilerImpl implements Compiler {
     }
 
     private void populateFullASTUpwardFrom(DynamicModel<? extends EObject> node) {
-        if (node.getDescriptor().isASTRoot()) {
+        if (node.getDescriptor().getSymbol().isASTRoot()) {
             return;
         }
         var parent = modelRegistry.createDefault(node.getDescriptor().getParentType());
         populateFullASTUpwardFrom(parent);
-        node.linkToParent(parent, RESET_ALL);
+        node.linkToParent(parent, LinkStrategies.FIRST_MATCHED_CLEAN_ANY);
     }
 
-    private static final class ResetAllNodeLinkStrategy implements DynamicModel.NodeLinkStrategy {
-        @Override
-        public boolean shouldOverrideSingular() {
-            return true;
-        }
-
-        @Override
-        public boolean shouldClearCollection() {
-            return true;
-        }
-
-        @Override
-        public Optional<EReference> selectContainingReference(Set<EReference> possibleReferences) {
-            return possibleReferences.stream().findFirst();
-        }
+    @Override
+    public <T extends EObject> Compilation<T> prepareCompilation(String snippet, ModelDescriptor<T> descriptor, EmbeddingDefinition<?>... defs) {
+        return null;
     }
 }

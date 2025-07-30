@@ -1,19 +1,18 @@
 package io.sidews.linkerman;
 
-import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 
 public interface ModelDescriptor<T extends EObject> {
 
-    boolean isASTRoot();
-
     Class<T> getSymbolType();
-
-    EClass getSymbolEClass();
 
     Class<? extends T> getReturnType();
 
     Class<? extends EObject> getParentType();
+
+    DSLSymbol getSymbol();
+
+    SymbolResolver getSymbolResolver();
 
     @FunctionalInterface
     interface Factory<T extends EObject> {

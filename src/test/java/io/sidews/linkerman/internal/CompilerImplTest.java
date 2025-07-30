@@ -4,18 +4,17 @@ import io.sidews.linkerman.DynamicModel;
 import io.sidews.linkerman.LinkerScriptContext;
 import io.sidews.linkerman.ModelDescriptor;
 import io.sidews.linkerman.Serializer;
-import io.sidews.linkerman.base.BasicGrammarAnalyzer;
-import io.sidews.linkerman.base.BasicSymbolConstructor;
-import io.sidews.linkerman.base.DefaultDynamicModel;
-import io.sidews.linkerman.base.DefaultModelDescriptor;
+import io.sidews.linkerman.base.*;
 import org.eclipse.cdt.linkerscript.linkerScript.InputSection;
 import org.eclipse.cdt.linkerscript.linkerScript.LExpression;
+import org.eclipse.cdt.linkerscript.linkerScript.OutputSection;
 import org.eclipse.cdt.linkerscript.linkerScript.StatementAssignment;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class CompilerImplTest {
@@ -34,11 +33,11 @@ public class CompilerImplTest {
 
     @BeforeAll
     static void globalSetup() {
-        var grammarAnalyzer = new BasicGrammarAnalyzer(ctx.getGrammar(),
-                ctx.getGrammarConstraintProvider());
-        descriptorRegistry = new DefaultModelDescriptor.Registry(grammarAnalyzer, ctx.getEPackage());
+        var grammarAnalyzer = new BasicGrammarAnalyzer(ctx);
+        var symbolManager = new SymbolManager(grammarAnalyzer, ctx);
+        descriptorRegistry = new DefaultModelDescriptor.Registry(symbolManager);
         var symbolConstructor = new BasicSymbolConstructor(descriptorRegistry, ctx.getEPackage(), grammarAnalyzer);
-        modelRegistry = new DefaultDynamicModel.Registry(descriptorRegistry, grammarAnalyzer, symbolConstructor);
+        modelRegistry = new DefaultDynamicModel.Registry(descriptorRegistry, symbolConstructor);
         serializer = new SerializerImpl(ctx);
         compiler = new CompilerImpl(descriptorRegistry, modelRegistry, serializer, ctx);
     }
@@ -74,6 +73,17 @@ public class CompilerImplTest {
     }
 
     @Test
+    void testCompile_OutputSection() {
+        var snippet = """
+                .text : { *(.text*) *(.rodata*) } > FLASH
+                """;
+        var result = compiler.compile(snippet,
+                descriptorRegistry.getOrCreate(OutputSection.class));
+        logModelXmi(result.single());
+        assertFalse(result.hasError());
+    }
+
+    @Test
     void testCompile_Expression() {
         var model = compiler.compile("hello", descriptorRegistry.getOrCreate(LExpression.class))
                 .single();
@@ -81,7 +91,6 @@ public class CompilerImplTest {
         logModelXmi(model);
         assertNotNull(model);
     }
-
 
     private void logModelXmi(DynamicModel<?> model) {
         logger.info("model in xmi:\n{}", serializer.serializeToXMI(model));

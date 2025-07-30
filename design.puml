@@ -1,0 +1,152 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+skinparam DefaultFontSize 11
+skinparam backgroundColor #F0F0F0
+skinparam backgroundColor #E6F0FA
+skinparam interfaceBackgroundColor #f0f8ff
+skinparam classBorderColor black
+skinparam arrowColor #2c3e50
+skinparam arrowFontColor #34495e
+skinparam classArrowFontSize 10
+
+' ===========================================
+' CORE INTERFACES
+' ===========================================
+
+interface DynamicModel<T extends EObject> {
+    + T getSymbol()
+    + ModelDescriptor<T> getDescriptor()
+    + void linkToParent(DynamicModel<?> parent)
+    + void linkToParent(DynamicModel<?> parent, NodeLinkStrategy s)
+}
+
+interface DynamicModelFactory<T extends EObject> {
+    + DynamicModel<T> createWith(T m)
+    + DynamicModel<T> createDefault()
+}
+
+interface DynamicModelRegistry {
+    + <T extends EObject> void registerFactory(Class<T> t, DynamicModelFactory<T> f)
+    + <T extends EObject> DynamicModelFactory<T> getFactory(Class<T> t)
+}
+
+interface ModelDescriptor<T extends EObject> {
+    + boolean isASTRoot()
+    + Class<T> getSymbolType()
+    + Class<? extends T> getReturnType()
+    + Class<? extends EObject> getParentType()
+}
+
+interface ModelDescriptorFactory<T extends EObject> {
+    + ModelDescriptor<T> getOrCreate()
+}
+
+interface ModelDescriptorRegistry {
+    + <T extends EObject> ModelDescriptorFactory<T> getFactory()
+    + <T extends EObject> registerFactory(Class<T> t, ModelDescriptorFactory<T> factory)
+}
+
+' ===========================================
+' COMPILATION INTERFACES
+' ===========================================
+
+interface Compiler {
+    + <T extends EObject> Compilation<T> prepareCompilation(String s, Class<T> t, EmbeddingDefinition<?>[] ds)
+    + <T extends EObject> CompilationResult compile(String s, Class<T> t)
+}
+
+interface CompilationResult<T extends EObject> {
+    + Stream<DynamicModel<T>> stream()
+    + DynamicModel<T> single()
+    + List<CompilationError> getErrors()
+    + boolean hasError()
+}
+
+interface CompilationError {
+    + String getMessage()
+    + int getLine()
+    + int getColumn()
+}
+
+interface Compilation<T extends EObject> {
+    + CompilationResult<T> compile()
+    + void setEmbedding(Embedding<? extend EObject> e)
+}
+
+' ===========================================
+' EMBEDDING INTERFACES
+' ===========================================
+
+interface EmbeddingDefinition<T extends EObject> {
+    + String getKey()
+    + ModelDescriptor<T> getModelDescriptor()
+    + Embedding<T> createEmbedding(DynamicModel<T> v)
+}
+
+interface Embedding<T extends EObject> {
+    + DynamicModel<T> getValue()
+    + EmbeddingDefinition<T> getDefinition()
+}
+
+' ===========================================
+' FACTORY INTERFACES
+' ===========================================
+
+
+' ===========================================
+' Serializer interface
+' ===========================================
+interface Serializer {
+    + String serializeToDSL(DynamicModel<?> m)
+}
+
+' ===========================================
+' RELATIONSHIPS
+' ===========================================
+
+' Compilation Flow
+Compiler --> Compilation : creates
+Compiler --> CompilationResult : outputs
+Compiler --> EmbeddingDefinition : uses
+
+CompilationResult --> CompilationError : may_have
+
+CompilationResult --> DynamicModel : wraps
+
+Compilation --> CompilationResult : outputs
+Compilation --> Embedding : uses
+
+' Embedding System
+EmbeddingDefinition --> Embedding : creates
+'EmbeddingDefinition --> DynamicModel : uses
+Embedding --> DynamicModel : references
+Embedding --> EmbeddingDefinition : references
+
+' Factory Pattern
+DynamicModelFactory --> DynamicModel : instantiates
+DynamicModelRegistry --> DynamicModelFactory : manages
+
+ModelDescriptorRegistry -down-> ModelDescriptorFactory : manages
+ModelDescriptorFactory -down-> ModelDescriptor : instantiates
+
+DynamicModel -right-> ModelDescriptor : contains
+
+' Serializer
+Serializer -r-> DynamicModel : serializes
+
+' ===========================================
+' LAYOUT HINTS
+' ===========================================
+
+' Group core interfaces at top
+DynamicModel -[hidden]- Compiler
+Compiler -[hidden]- Compilation
+
+' Group embedding interfaces together
+EmbeddingDefinition -[hidden]- Embedding
+
+' Group factory interfaces together
+'DynamicModelFactory -[hidden]- DynamicModelRegistry
+
+@enduml

@@ -20,9 +20,9 @@ public class BasicSymbolConstructorTest {
     @BeforeAll
     static void globalSetup() {
         var ctx = new LinkerScriptContext();
-        var grammarAnalyzer = new BasicGrammarAnalyzer(
-                ctx.getGrammar(), ctx.getGrammarConstraintProvider());
-        var registry = new DefaultModelDescriptor.Registry(grammarAnalyzer, ctx.getEPackage());
+        var grammarAnalyzer = new BasicGrammarAnalyzer(ctx);
+        var symbolManager = new SymbolManager(grammarAnalyzer, ctx);
+        var registry = new DefaultModelDescriptor.Registry(symbolManager);
         constructor = new BasicSymbolConstructor(registry, ctx.getEPackage(), grammarAnalyzer);
     }
 

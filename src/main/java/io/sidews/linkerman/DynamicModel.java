@@ -3,41 +3,32 @@ package io.sidews.linkerman;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EReference;
 
-import java.util.Optional;
-import java.util.Set;
+import java.util.List;
 
 public interface DynamicModel<T extends EObject> {
 
     ModelDescriptor<T> getDescriptor();
 
-    T getSymbol();
+    T getSymbolInstance();
 
-    void linkToParent(DynamicModel<? extends EObject> parent);
+    void linkToParent(DynamicModel<? extends EObject> parent, LinkStrategy linkStrategy);
 
-    void linkToParent(DynamicModel<? extends EObject> parent, NodeLinkStrategy linkStrategy);
+    void linkToParentAtFirst(DynamicModel<? extends EObject> parent, LinkStrategy linkStrategy);
 
-    void linkToParentAtFirst(DynamicModel<? extends EObject> parent);
+    void linkToParentAtLast(DynamicModel<? extends EObject> parent, LinkStrategy linkStrategy);
 
-    void linkToParentAtFirst(DynamicModel<? extends EObject> parent, NodeLinkStrategy linkStrategy);
-
-    void linkToParentAtLast(DynamicModel<? extends EObject> parent);
-
-    void linkToParentAtLast(DynamicModel<? extends EObject> parent, NodeLinkStrategy linkStrategy);
-
-    void linkToParentAtIndex(int index, DynamicModel<? extends EObject> parent);
-
-    void linkToParentAtIndex(int index, DynamicModel<? extends EObject> parent, NodeLinkStrategy linkStrategy);
+    void linkToParentAtIndex(int index, DynamicModel<? extends EObject> parent, LinkStrategy linkStrategy);
 
     @FunctionalInterface
-    interface NodeLinkStrategy {
+    interface LinkStrategy {
 
-        Optional<EReference> selectContainingReference(Set<EReference> possibleReferences);
+        EReference determineContainingReference(List<EReference> possibleReferences);
 
-        default boolean shouldOverrideSingular() {
+        default boolean shouldOverrideSingleFeatures() {
             return false;
         }
 
-        default boolean shouldClearCollection() {
+        default boolean shouldClearCollectionFeatures() {
             return false;
         }
     }
@@ -53,27 +44,5 @@ public interface DynamicModel<T extends EObject> {
         <T extends EObject> DynamicModel<T> createWith(T symbol);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

@@ -10,6 +10,7 @@ import org.eclipse.xtext.Grammar;
 import org.eclipse.xtext.IGrammarAccess;
 import org.eclipse.xtext.serializer.ISerializer;
 import org.eclipse.xtext.serializer.analysis.IGrammarConstraintProvider;
+import org.eclipse.xtext.validation.IResourceValidator;
 
 public class BaseDSLContext implements DSLContext {
 
@@ -97,5 +98,10 @@ public class BaseDSLContext implements DSLContext {
     @Override
     public ISerializer getXtextSerializer() {
         return getInjector().getInstance(ISerializer.class);
+    }
+
+    @Override
+    public IResourceValidator getValidator() {
+        return getInjector().getInstance(IResourceValidator.class);
     }
 }

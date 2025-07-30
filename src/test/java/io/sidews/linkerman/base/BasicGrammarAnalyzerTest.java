@@ -17,14 +17,14 @@ public class BasicGrammarAnalyzerTest {
 
     private static final Logger logger = LoggerFactory.getLogger(BasicGrammarAnalyzerTest.class);
 
-    private static GrammarAnalyzer analyzer;
+    private static BasicGrammarAnalyzer analyzer;
 
     private static LinkerScriptPackage pkg;
 
     @BeforeAll
     static void globalSetup() {
         var ctx = new LinkerScriptContext();
-        analyzer = new BasicGrammarAnalyzer(ctx.getGrammar(), ctx.getGrammarConstraintProvider());
+        analyzer = new BasicGrammarAnalyzer(ctx);
         pkg = ctx.getLinkerScriptPackage();
     }
 
@@ -105,6 +105,16 @@ public class BasicGrammarAnalyzerTest {
     void testGetSymbolContainer_InputSection_StatementInputSection() {
         var refs = analyzer.getSymbolContainers(pkg.getInputSection(), pkg.getStatementInputSection());
         assertEquals(1, refs.size());
+    }
+
+    @Test
+    void testGetSymbolReturnTypes_EdgeCase() {
+        var symbolType = pkg.getLExpression();
+        var result = analyzer.getSymbolReturnTypes(symbolType);
+        logger.info("Return types for {} ({}):", symbolType.getName(), result.size());
+        for (var type : result) {
+            logger.info("--> {}", type.getName());
+        }
     }
 }
 

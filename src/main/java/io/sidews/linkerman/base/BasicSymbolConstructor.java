@@ -32,9 +32,13 @@ public class BasicSymbolConstructor implements SymbolConstructor {
         var target = ePackage.getEFactoryInstance().create(
                 EMFUtil.findEClassOf(descriptor.getReturnType(), ePackage));
 
-        target.eClass().getEAllAttributes().stream()
+        /*target.eClass().getEAllAttributes().stream()
                 .filter(grammarAnalyzer::isFeatureRequired)
-                .forEach(attr -> ensureFeatureRequirement(target, attr, this::createAttributeValue));
+                .forEach(attr -> ensureFeatureRequirement(target, attr, this::createAttributeValue));*/
+        for (var attr : target.eClass().getEAllAttributes()) {
+            grammarAnalyzer.isFeatureRequired(attr);
+            ensureFeatureRequirement(target, attr, this::createAttributeValue);
+        }
 
 
         target.eClass().getEAllContainments().stream()
@@ -81,7 +85,7 @@ public class BasicSymbolConstructor implements SymbolConstructor {
     }
 
     private String generateDummyString() {
-        return "dummy-" + dummyStringCounter.getAndIncrement();
+        return "__dummy-" + dummyStringCounter.getAndIncrement();
     }
 }
 
