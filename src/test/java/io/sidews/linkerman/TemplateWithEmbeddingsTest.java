@@ -17,7 +17,7 @@ public class TemplateWithEmbeddingsTest {
             
             MEMORY
             {
-                /* Ram with embedding values */
+               /* Memory setting with embeddings */
                RAM   (rwx) : ORIGIN = ${RAM_ORIGIN_EMBEDDING}, LENGTH = ${RAM_LENGTH_EMBEDDING}
                FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 256K
             }
@@ -55,7 +55,7 @@ public class TemplateWithEmbeddingsTest {
             
             MEMORY
             {
-                /* Ram with embedding values */
+               /* Memory setting with embeddings */
                RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 64k
                FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 256K
             }

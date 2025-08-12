@@ -13,15 +13,15 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-class DSLLoader {
+public class DSLLoader {
 
     private final DSLContext dslContext;
 
-    DSLLoader(DSLContext dslContext) {
+    public DSLLoader(DSLContext dslContext) {
         this.dslContext = dslContext;
     }
 
-    LoadResult loadDSL(String content) {
+    public LoadResult loadDSL(String content) {
         var resource = dslContext.getResourceSet()
                 .createResource(InMemURIGenerator.createFor(dslContext.getExtension()));
         try {
@@ -39,14 +39,14 @@ class DSLLoader {
         return new LoadResult(resource.getContents().getFirst(), issues);
     }
 
-    Resource createResourceAttachedTo(EObject eObject) {
+    public Resource createResourceAttachedTo(EObject eObject) {
         var resource = dslContext.getResourceSet()
                 .createResource(InMemURIGenerator.createFor(dslContext.getExtension()));
         resource.getContents().add(eObject);
         return resource;
     }
 
-    static final class LoadResult {
+    public static final class LoadResult {
         private final EObject root;
         private final List<Issue> issues;
 
@@ -55,11 +55,11 @@ class DSLLoader {
             this.issues = issues;
         }
 
-        EObject getRoot() {
+        public EObject getRoot() {
             return root;
         }
 
-        List<Issue> getIssues() {
+        public List<Issue> getIssues() {
             return issues;
         }
     }

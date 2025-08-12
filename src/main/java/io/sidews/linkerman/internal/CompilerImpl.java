@@ -2,11 +2,13 @@ package io.sidews.linkerman.internal;
 
 import io.sidews.linkerman.*;
 import io.sidews.linkerman.base.LinkStrategies;
+import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.xtext.resource.ILocationInFileProvider;
 import org.eclipse.xtext.validation.Issue;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class CompilerImpl implements Compiler {
@@ -44,17 +46,29 @@ public class CompilerImpl implements Compiler {
 
         var finalAST = loadResult.getRoot();
 
+        var finalASTModel = modelRegistry.createWith(finalAST);
+        serializer.serializeToDSL(finalASTModel);
+
         var errors = toErrors(loadResult.getIssues());
 
-        var targetNode = finalAST.eResource().getEObject(targetUriFragment);
+        var targetNode = (T) finalAST.eResource().getEObject(targetUriFragment);
+        var resultModels = new ArrayList<DynamicModel<T>>();
+        var containingRef = targetNode.eContainingFeature();
+        if (containingRef.isMany()) {
+            var containingList = (EList<EObject>) targetNode.eContainer().eGet(containingRef);
+            containingList.forEach(n -> resultModels.add(modelRegistry.createWith((T) n)));
+        }
+        else {
+            resultModels.add(modelRegistry.createWith(targetNode));
+        }
 
-        var resultXmi = serializer.serializeToXMI(targetNode);
+        targetNode.eResource().unload();
 
-        var resultNode = (T) serializer.deserializeFromXMI(resultXmi);
+        //var resultXmi = serializer.serializeToXMI(targetNode);
 
-        var resultModel = modelRegistry.createWith(resultNode);
+        //var resultNode = (T) serializer.deserializeFromXMI(resultXmi);
 
-        return new CompilationResultImpl<>(List.of(resultModel), errors);
+        return new CompilationResultImpl<>(resultModels, errors);
     }
 
     private List<CompilationError> toErrors(List<Issue> issues) {

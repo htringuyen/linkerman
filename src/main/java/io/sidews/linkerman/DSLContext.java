@@ -12,6 +12,8 @@ import org.eclipse.xtext.validation.IResourceValidator;
 
 public interface DSLContext {
 
+    String getLanguageId();
+
     EClass getRootEClass();
 
     String getExtension();

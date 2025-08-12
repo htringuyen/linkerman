@@ -12,7 +12,11 @@ import org.eclipse.xtext.serializer.ISerializer;
 import org.eclipse.xtext.serializer.analysis.IGrammarConstraintProvider;
 import org.eclipse.xtext.validation.IResourceValidator;
 
+import java.util.Objects;
+
 public class BaseDSLContext implements DSLContext {
+
+    private final String languageId;
 
     private final Injector injector;
 
@@ -30,7 +34,8 @@ public class BaseDSLContext implements DSLContext {
 
     private final String extension;
 
-    public BaseDSLContext(EClass rootEClass, Injector injector, String extension) {
+    public BaseDSLContext(String languageId, EClass rootEClass, Injector injector, String extension) {
+        this.languageId = languageId;
         this.rootEClass = rootEClass;
         this.ePackage = rootEClass.getEPackage();
         this.eFactory = ePackage.getEFactoryInstance();
@@ -38,21 +43,16 @@ public class BaseDSLContext implements DSLContext {
         this.resourceSet = injector.getInstance(ResourceSet.class);
         this.grammar = injector.getInstance(IGrammarAccess.class).getGrammar();
         this.grammarConstraintProvider = injector.getInstance(IGrammarConstraintProvider.class);
-        if (extension == null) {
-            this.extension = resourceSet.getResourceFactoryRegistry()
-                    .getExtensionToFactoryMap()
-                    .keySet()
-                    .stream()
-                    .findFirst()
-                    .orElseThrow();
-        }
-        else {
-            this.extension = extension;
-        }
+        this.extension = Objects.requireNonNullElseGet(extension, () -> resourceSet.getResourceFactoryRegistry()
+                .getExtensionToFactoryMap()
+                .keySet()
+                .stream()
+                .findFirst()
+                .orElseThrow());
     }
 
-    public BaseDSLContext(EClass rootEClass, Injector injector) {
-        this(rootEClass, injector, null);
+    public BaseDSLContext(String languageId, EClass rootEClass, Injector injector) {
+        this(languageId, rootEClass, injector, null);
     }
 
     @Override
@@ -104,4 +104,44 @@ public class BaseDSLContext implements DSLContext {
     public IResourceValidator getValidator() {
         return getInjector().getInstance(IResourceValidator.class);
     }
+
+    @Override
+    public String getLanguageId() {
+        return languageId;
+    }
+
+    @Override
+    public int hashCode() {
+        return languageId.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof BaseDSLContext other) {
+            return this.getLanguageId().equals(other.getLanguageId());
+        }
+        return false;
+    }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

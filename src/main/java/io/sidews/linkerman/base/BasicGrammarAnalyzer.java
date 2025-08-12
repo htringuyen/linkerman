@@ -13,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class BasicGrammarAnalyzer implements GrammarAnalyzer {
@@ -84,7 +83,7 @@ public class BasicGrammarAnalyzer implements GrammarAnalyzer {
             resultPaths.forEach(path -> result.add(path.pop()));
         }
         else if (isActionRefType(symbolType)) {
-            // do simple processing that work for all cases of linkerscript dsl
+            // do simple processing that works for all cases of linkerscript dsl
             // but for other language, there may be rare exceptions
             // however, to handle these rare exceptions requires a much more complicated algorithms
             result.add(symbolType);

@@ -14,8 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class CompilerImplTest {
 
@@ -76,11 +75,13 @@ public class CompilerImplTest {
     void testCompile_OutputSection() {
         var snippet = """
                 .text : { *(.text*) *(.rodata*) } > FLASH
+                .text2 : { *(.text*) *(.rodata*) } > FLASH
                 """;
         var result = compiler.compile(snippet,
                 descriptorRegistry.getOrCreate(OutputSection.class));
-        logModelXmi(result.single());
         assertFalse(result.hasError());
+        assertEquals(2, result.size());
+        result.stream().forEach(this::logModelXmi);
     }
 
     @Test
@@ -97,31 +98,3 @@ public class CompilerImplTest {
     }
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

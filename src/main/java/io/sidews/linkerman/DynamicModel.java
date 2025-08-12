@@ -5,6 +5,10 @@ import org.eclipse.emf.ecore.EReference;
 
 import java.util.List;
 
+/**
+ * Wrap a Xtext DSL model and provide dynamic mutating methods.
+ * @param <T> The Java Type of the grammar symbol (symbol is special term defined by this library).
+ */
 public interface DynamicModel<T extends EObject> {
 
     ModelDescriptor<T> getDescriptor();

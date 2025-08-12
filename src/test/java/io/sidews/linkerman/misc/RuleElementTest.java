@@ -1,13 +1,11 @@
-package io.sidews.linkerman;
+package io.sidews.linkerman.misc;
 
-import io.sidews.linkerman.base.BasicGrammarAnalyzer;
+import io.sidews.linkerman.LinkerScriptContext;
 import org.eclipse.xtext.*;
 import org.eclipse.xtext.util.Strings;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
 
 public class RuleElementTest {
 

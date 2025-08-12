@@ -5,7 +5,6 @@ import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.EStructuralFeature;
 
 import java.util.List;
-import java.util.Set;
 
 public interface GrammarAnalyzer {
 

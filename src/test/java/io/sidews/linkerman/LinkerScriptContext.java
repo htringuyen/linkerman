@@ -20,7 +20,7 @@ public class LinkerScriptContext extends BaseDSLContext {
     }
 
     public LinkerScriptContext() {
-        super(rootEClass, injector, extension);
+        super("LinkerScript", rootEClass, injector, extension);
     }
 
     public LinkerScriptPackage getLinkerScriptPackage() {

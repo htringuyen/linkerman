@@ -1,0 +1,44 @@
+@startuml
+start
+
+:Input: a_met, b_met, c_met, d_met, e_met;
+
+if (a_met?) then (yes)
+  :tors_section = find_section_tors();
+  :tors_assignment = create_assignment_a();
+  :add_assignment_last(tors_section, tors_assignment);
+endif
+
+:sections_container = find_sections_container();
+:index_of_tors = find_section_index_tors();
+
+if (b_met AND NOT c_met?) then (yes)
+  :section_b = create_section_b();
+  :add_section_index(index_of_tors + 1, section_b, sections_container);
+elseif (NOT b_met AND c_met?) then (yes)
+  :section_c = create_section_c();
+  :add_section_index(index_of_tors + 1, section_c, sections_container);
+elseif (b_met AND c_met?) then (yes)
+  :section_b = create_section_b();
+  :section_c = create_section_c();
+  :add_section_index(index_of_tors + 1, section_b, sections_container);
+  :add_section_index(index_of_tors + 2, section_c, sections_container);
+endif
+
+:index_of_data = find_section_index_data();
+
+if (d_met AND NOT e_met?) then (yes)
+  :section_d = create_section_d();
+  :add_section_index(index_of_data + 1, section_d, sections_container);
+elseif (NOT d_met AND e_met?) then (yes)
+  :section_e = create_section_e();
+  :add_section_index(index_of_data + 1, section_e, sections_container);
+elseif (d_met AND e_met?) then (yes)
+  :section_d = create_section_d();
+  :section_e = create_section_e();
+  :add_section_index(index_of_data + 1, section_d, sections_container);
+  :add_section_index(index_of_data + 2, section_e, sections_container);
+endif
+
+stop
+@enduml
